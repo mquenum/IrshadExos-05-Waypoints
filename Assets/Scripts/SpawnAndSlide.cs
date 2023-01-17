@@ -1,12 +1,13 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class SpawnAndSlide : MonoBehaviour
 {
     [SerializeField] private GameObject _object;
     [SerializeField] private float _timer = 2.0f;
-    private float _interpolationRate = 0;
 
     void OnMouseDown()
     {
@@ -20,39 +21,41 @@ public class SpawnAndSlide : MonoBehaviour
         GameObject currentCube = Instantiate(_object);
         int nbWaypoints = final.Length;
         int counter = 0;
-        float current = 0;
-        float lerpValue = 0;
+        float elapsedTime = 0;
 
         final[0] = gameObject;
 
-        for (int i = 0; i < waypoints.Length; i++) {
-            final[i+1] = waypoints[i];
-        }
-
-        // sort the pool of game objects in order of proximity to our object (the smaller the X axis, the higher smaller the index)
-        System.Array.Sort(final, (a, b) => (b.transform.position.x.CompareTo(a.transform.position.x)));
-
-        _interpolationRate += Time.deltaTime;
-
-        while (counter < nbWaypoints)
+        for (int i = 0; i < waypoints.Length; i++)
         {
-            if (final[counter].transform)
-            {
-                Transform currentWaypoint = final[counter].transform;
-
-                lerpValue = Mathf.InverseLerp(0, _timer, current);
-
-                currentCube.transform.position = Vector3.Lerp(currentCube.transform.position, currentWaypoint.position, lerpValue);
-                counter++;
-                current += Time.deltaTime;
-
-                yield return new WaitForSeconds(_timer);
-            }
+            final[i + 1] = waypoints[i];
         }
 
-        if (counter == nbWaypoints)
+        final = SortWaypoints(final);
+
+        while (elapsedTime < _timer)
+        {
+            currentCube.transform.position = Vector3.Lerp(final[counter].transform.position, final[counter + 1].transform.position, (elapsedTime / _timer));
+            elapsedTime += Time.deltaTime;
+
+            if (currentCube.transform.position == final[counter + 1].transform.position)
+            {
+                counter++;
+            }
+
+            yield return null;
+        }
+
+        if (counter + 1 == nbWaypoints)
         {
             Destroy(currentCube);
         }
+    }
+
+    private GameObject[] SortWaypoints(GameObject[] waypoints)
+    {
+        // sort the pool of game objects in order of proximity to our object (the smaller the X axis, the higher smaller the index)
+        System.Array.Sort(waypoints, (a, b) => (b.transform.position.x.CompareTo(a.transform.position.x)));
+
+        return waypoints;
     }
 }
